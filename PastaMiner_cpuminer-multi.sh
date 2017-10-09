@@ -1,7 +1,7 @@
 #!/bin/bash
 clear
 # VARIABLES
-version=0.01
+version=0.02
 
 # FUNCTIONS
 _intro ()
@@ -13,6 +13,103 @@ echo "Coins supported :"
 echo "- XMR (Monero)"
 }
 
+_ask_coin ()
+{
+echo "(Alt)coins available :"
+echo
+echo "1) XMR (Monero)"
+echo "2) DOGE (Dogecoin)"
+echo
+read -p "Which (alt)coin do you want to mine ? : " coin
+case "$coin" in
+	1 ) _default_pool_server XMR;;
+	2 ) _default_pool_server DOGE;;
+esac
+}
+
+_default_pool_server ()
+{
+if [ "$1" == "XMR" ]; then
+	defaultserverpool="pool.minexmr.com"
+	ports="7777"
+	serverpoolpassword="x"
+	coin="XMR"
+	skippwd="yes"
+fi
+if [ "$1" == "DOGE" ]; then
+	defaultserverpool="eu.multipool.us"
+	coin="DOGE"
+fi
+}
+
+_ask_wallet ()
+{
+read -p "Could you give me your wallet please ? : " wallet
+echo "Thanks"
+}
+
+_ask_server_pool_password ()
+{
+if [ "$skippwd" == "" ]; then
+	read -p "Could you give me the server pool password if needed ? (if no password, press ENTER)" serverpoolpassword
+	echo "Thanks for the password."
+else
+	echo "Password already known."
+fi
+}
+
+_ask_server_pool_port ()
+{
+read -p "Could you give me the port(s) ( ie 4444 or 4444,5555 ) please ? : " ports
+echo "Thanks"
+}
+
+_ask_server_pool_name ()
+{
+read -p "Could you give the pool server name URL (ie : pool.serverpool.com ) please ? : " serverpool
+echo "Thanks"
+}
+
+_ask_server_pool ()
+{
+_ask_question_yn "Do you want to set a custom mining pool ? (you will also need to know the PORTS) [y/n] "
+if [ "$answer" == "y" ]; then
+	_ask_server_pool_name
+	echo
+	_ask_server_pool_port
+else
+	echo "We will use $defaultserverpool for mining ;)"
+	serverpool=$defaultserverpool
+fi
+echo
+_ask_server_pool_password
+}
+
+_ask_resume ()
+{
+echo "With the info you gave me, I can resume the miner with this settings :"
+echo
+echo "(Alt)coin : $coin"
+echo "Server pool URL : $serverpool"
+echo "Server pool port(s) : $ports"
+echo "Server pool password : $serverpoolpassword"
+echo "Your wallet : $wallet"
+echo
+_ask_question_yn "All of this information are correct ? [y/n] "
+}
+
+_easy_mode_wizard ()
+{
+_ask_coin
+echo "$coin is a good choice !"
+echo
+_ask_server_pool
+echo
+_ask_wallet
+echo
+_ask_resume
+}
+
 _back_to_begin ()
 {
 clear && _check_flag_folder && _intro && _check_cpuminer && _main_menu
@@ -21,17 +118,18 @@ clear && _check_flag_folder && _intro && _check_cpuminer && _main_menu
 _main_menu ()
 {
 echo
-echo "1) Add miner (easy/advanced)"
+echo "1) Add miner wizard"
 echo "2) Manage miner (start/stop/delete)"
 echo "3) Enable Plex Stream Watch"
 echo
+echo "7) Reinstall cpuminer-multi from latest updates"
 echo "8) Update PastaMiner_cpuminer-multi"
 echo "9) Uninstall PastaMiner_cpuminer-multi"
 echo "0) Quit"
 echo
 read -p "What do you want to do ? " choice
 case "$choice" in
-	1 );;
+	1 ) echo;_easy_mode_wizard;;
 	2 );;
 	3 );;
 	8 );;
