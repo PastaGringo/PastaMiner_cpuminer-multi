@@ -1,0 +1,1 @@
+# PastaMiner_cpuminer-multi
