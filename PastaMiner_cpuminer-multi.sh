@@ -27,6 +27,36 @@ case "$coin" in
 esac
 }
 
+_ask_manage_worker () {
+workers_array=()
+workers=$(ls | grep "pastaminer")
+if [ "$workers" == "" ]; then
+	echo "You don't have any worker, let's create one !"
+	echo;ask_configure_easy
+fi
+for worker in $workers;
+do
+	#echo "Ajout de $worker au tableau"
+	workers_array+=($worker)
+	#echo "Ajouté"
+done
+echo "List of your workers :"
+for index in "${!workers_array[@]}"; do
+	indexplus1=$(( $index+1 ))
+	echo "$indexplus1) ${workers_array[index]}"
+done
+echo
+read -p "Which worker do you want to manage ?" workerchoice
+indexminus1=$(($workerchoice-1))
+if [ "$workerchoice" == "" ]; then
+	echo "No value selected"
+else
+	echo "You choose ${workers_array[$indexminus1]}"
+	workerchoicename="${workers_array[$indexminus1]}"
+	_ask_worker_action
+fi
+}
+
 _ask_nb_threads () {
 nbproc=$(nproc)
 echo "You currently have $nbproc CPU that can be dedicated to your workers"
