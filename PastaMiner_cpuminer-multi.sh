@@ -31,9 +31,10 @@ _default_pool_server ()
 {
 if [ "$1" == "XMR" ]; then
 	defaultserverpool="pool.minexmr.com"
-	ports="7777"
+	ports="4444,5555"
 	serverpoolpassword="x"
 	coin="XMR"
+	algorithm="cryptonight"
 	skippwd="yes"
 fi
 if [ "$1" == "DOGE" ]; then
@@ -91,11 +92,73 @@ echo "With the info you gave me, I can resume the miner with this settings :"
 echo
 echo "(Alt)coin : $coin"
 echo "Server pool URL : $serverpool"
+echo "Coin algorithm : $algorithm"
 echo "Server pool port(s) : $ports"
 echo "Server pool password : $serverpoolpassword"
 echo "Your wallet : $wallet"
+echo "Worker name : $worker_name"
 echo
 _ask_question_yn "All of this information are correct ? [y/n] "
+}
+
+_check_screen ()
+{
+if [[ $(screen -ls) == *"$1"* ]]; then
+	echo "Worker already screened !"
+	screened=1
+else
+	echo "Worker not screened yet !"
+	screened=0
+fi
+}
+
+_start_worker ()
+{
+worker_screen_list=$(screen -ls)
+pwd
+echo "Starting worker $1..."
+screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword
+echo
+if [[ $(screen -ls) == *"$1"* ]]; then
+	echo "$workerchoicename has been started !"
+else
+	echo "$workerchoicename has NOT been started !"
+fi
+}
+
+_stop_worker ()
+{
+echo "STOP"
+}
+
+_delete_worker ()
+{
+echo "STOP"
+}
+
+_ask_worker_name ()
+{
+UUID=$RANDOM
+read -p "How do you want to name your worker ? (if not pastaminer-$UUID-$coin will be used)" worker_name
+if [ "$worker_name" == "" ]; then
+	worker_name="pastaminer-$UUID-$coin"
+	echo "So let's use $worker_name"
+else
+	echo "What a beautiful name ! "
+fi
+}
+
+_create_worker ()
+{
+if [ "$answer" == "y" ]; then
+	echo "Checking if $1 currently existing..."
+elif [ "$screened" == "0" ]; then
+	echo "No !"
+	echo "Creating worker..."
+	_start_worker $1
+else
+	echo "Worker $1 already started !"
+fi
 }
 
 _easy_mode_wizard ()
@@ -107,7 +170,12 @@ _ask_server_pool
 echo
 _ask_wallet
 echo
+_ask_worker_name
+echo
 _ask_resume
+echo
+_start_worker $worker_name
+echo
 }
 
 _back_to_begin ()
@@ -118,8 +186,8 @@ clear && _check_flag_folder && _intro && _check_cpuminer && _main_menu
 _main_menu ()
 {
 echo
-echo "1) Add miner wizard"
-echo "2) Manage miner (start/stop/delete)"
+echo "1) Add worker wizard"
+echo "2) Manage worker (start/stop/delete)"
 echo "3) Enable Plex Stream Watch"
 echo
 echo "7) Reinstall cpuminer-multi from latest updates"
