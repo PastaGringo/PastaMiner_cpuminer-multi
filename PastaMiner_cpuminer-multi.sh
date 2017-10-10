@@ -27,6 +27,19 @@ case "$coin" in
 esac
 }
 
+_ask_nb_threads () {
+nbproc=$(nproc)
+echo "You currently have $nbproc CPU that can be dedicated to your workers"
+echo
+echo "BE CAREFUL, surallocating threads is dangerous for your system !"
+echo "=> DO NOT exceed $nbproc (PastaMiner will not permit it)"
+echo "=> For safety, allocate $nbproc-1 threads to let your system breath a bit :)"
+echo
+read -p "How many threads do you want to allocte to your worker ? " nbthreads
+echo "Ok, $nbthreads seems good !"
+echo
+}
+
 _default_pool_server ()
 {
 if [ "$1" == "XMR" ]; then
@@ -91,6 +104,7 @@ _ask_resume ()
 echo "With the info you gave me, I can resume the miner with this settings :"
 echo
 echo "(Alt)coin : $coin"
+echo "CPU threads : $$nbthreads"
 echo "Server pool URL : $serverpool"
 echo "Coin algorithm : $algorithm"
 echo "Server pool port(s) : $ports"
@@ -117,7 +131,7 @@ _start_worker ()
 worker_screen_list=$(screen -ls)
 pwd
 echo "Starting worker $1..."
-screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword
+screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword -t $nbthreads
 echo
 if [[ $(screen -ls) == *"$1"* ]]; then
 	echo "$workerchoicename has been started !"
@@ -165,6 +179,8 @@ _easy_mode_wizard ()
 {
 _ask_coin
 echo "$coin is a good choice !"
+echo
+_ask_nb_threads
 echo
 _ask_server_pool
 echo
