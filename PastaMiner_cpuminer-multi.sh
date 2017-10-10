@@ -255,7 +255,7 @@ echo
 read -p "What do you want to do ? " choice
 case "$choice" in
 	1 ) echo;_easy_mode_wizard;;
-	2 );;
+	2 ) echo;_ask_manage_worker;;
 	3 );;
 	8 );;
 	9 ) _uninstall_pastaminer;;
