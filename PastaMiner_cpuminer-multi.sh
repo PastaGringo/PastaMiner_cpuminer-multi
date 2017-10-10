@@ -134,15 +134,26 @@ echo "Starting worker $1..."
 screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword -t $nbthreads
 echo
 if [[ $(screen -ls) == *"$1"* ]]; then
-	echo "$workerchoicename has been started !"
+	echo "[SUCCESS] $1 has been started !"
 else
-	echo "$workerchoicename has NOT been started !"
+	echo "[ERROR] $1 has NOT been started !"
 fi
 }
 
-_stop_worker ()
-{
-echo "STOP"
+_stop_worker () {
+if [[ $(screen -ls) == *"$1"* ]]; then
+	echo "$1 has been found."
+	echo "Killing it..."
+	screen -X -S $1 kill
+	if [[ ! $(screen -ls) == *"$1"* ]]; then
+		echo "$1 has been stopped !"
+	else
+		echo "[ERROR]I can't kill it... !"
+	fi
+else
+echo "There is no ACTIVE worker called $1"
+fi
+_main_menu
 }
 
 _delete_worker ()
