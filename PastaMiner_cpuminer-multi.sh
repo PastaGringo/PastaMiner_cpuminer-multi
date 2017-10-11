@@ -2,6 +2,7 @@
 clear
 # VARIABLES
 version=0.02
+#workers=$(screen -ls | grep "pastaminer" | cut -d . -f2 | cut -d "(" -f1)
 
 # FUNCTIONS
 _intro ()
@@ -11,6 +12,33 @@ echo "Welcome to PastaMiner v$version ! (with cpuminer-multi)"
 echo
 echo "Coins supported :"
 echo "- XMR (Monero)"
+echo
+}
+
+_worker_status_widget () {
+#workers=$(screen -ls | grep "pastaminer" | cut -d . -f2 | cut -d "(" -f1)
+workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
+if [ ! "$workers" == "" ]; then
+	#echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
+	echo " Worker name Status Miner pool Wallet "
+	echo "-----------------------------------------------------------------------------------------------------------------------------------------------------------"
+	for worker in $workers; do
+		_check_state $worker
+		echo "| $worker | $state | | |"
+		echo "-----------------------------------------------------------------------------------------------------------------------------------------------------------"
+	done
+else
+	echo "There is no active worker."
+fi
+}
+
+_check_state () {
+if [[ $(screen -ls) == *"$1"* ]]; then
+	state=$(echo -e "\e[32mRUNNING\e[39m")
+else
+	state=$(echo -e "\e[31mNOT RUNNING\e[39m")
+fi
+#echo "$1 is $state"
 }
 
 _ask_coin ()
@@ -27,12 +55,54 @@ case "$coin" in
 esac
 }
 
+function _ask_worker_action () {
+echo
+echo "1) Start worker"
+echo "2) Stop worker"
+echo "3) Status worker"
+echo "4) Delete worker"
+echo
+read -p "What do you want to do for $workerchoicename ? " workeraction
+_worker_action
+}
+
+_worker_action () {
+case "$workeraction" in
+	1 ) _start_worker $workerchoicename;;
+	2 ) _stop_worker $workerchoicename;;
+	3 ) _worker_status $workerchoicename;;
+	4 ) _ask_delete_worker $workerchoicename;;
+esac
+}
+
+#_get_workers_list () {
+#workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
+#
+#}
+
+_get_worker_conf () {
+while IFS='' read -r line || [[ -n "$line" ]]; do
+	if [[ "$line" == *"$1"* ]]; then
+		workerconf=$line
+	fi
+done < workers.conf
+workername=$(echo $workerconf | cut -f1 -d";")
+coin=$(echo $workerconf | cut -f2 -d";")
+cputhreads=$(echo $workerconf | cut -f3 -d";")
+serverpool=$(echo $workerconf | cut -f4 -d";")
+algorithm=$(echo $workerconf | cut -f5 -d";")
+ports=$(echo $workerconf | cut -f6 -d";")
+poolpassword=$(echo $workerconf | cut -f7 -d";")
+wallet=$(echo $workerconf | cut -f8 -d";")
+}
+
 _ask_manage_worker () {
 workers_array=()
-workers=$(ls | grep "pastaminer")
+workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
 if [ "$workers" == "" ]; then
 	echo "You don't have any worker, let's create one !"
-	echo;ask_configure_easy
+	#_easy_mode_wizard
+	#_read_workers_conf
 fi
 for worker in $workers;
 do
@@ -46,7 +116,7 @@ for index in "${!workers_array[@]}"; do
 	echo "$indexplus1) ${workers_array[index]}"
 done
 echo
-read -p "Which worker do you want to manage ?" workerchoice
+read -p "Which worker do you want to manage ? : " workerchoice
 indexminus1=$(($workerchoice-1))
 if [ "$workerchoice" == "" ]; then
 	echo "No value selected"
@@ -65,9 +135,8 @@ echo "BE CAREFUL, surallocating threads is dangerous for your system !"
 echo "=> DO NOT exceed $nbproc (PastaMiner will not permit it)"
 echo "=> For safety, allocate $nbproc-1 threads to let your system breath a bit :)"
 echo
-read -p "How many threads do you want to allocte to your worker ? " nbthreads
+read -p "How many threads do you want to allocate to your worker ? " nbthreads
 echo "Ok, $nbthreads seems good !"
-echo
 }
 
 _default_pool_server ()
@@ -129,20 +198,30 @@ echo
 _ask_server_pool_password
 }
 
+_save_worker () {
+if [ "$answer" == "y" ]; then
+echo "Saving the worker configuration localy..."
+cat >>workers.conf <<EOL
+$workername;$coin;$nbthreads;$serverpool;$algorithm;$ports;$serverpoolpassword;$wallet
+EOL
+fi
+}
+
 _ask_resume ()
 {
 echo "With the info you gave me, I can resume the miner with this settings :"
 echo
 echo "(Alt)coin : $coin"
-echo "CPU threads : $$nbthreads"
+echo "CPU threads : $nbthreads"
 echo "Server pool URL : $serverpool"
 echo "Coin algorithm : $algorithm"
 echo "Server pool port(s) : $ports"
 echo "Server pool password : $serverpoolpassword"
 echo "Your wallet : $wallet"
-echo "Worker name : $worker_name"
+echo "Worker name : $workername"
 echo
 _ask_question_yn "All of this information are correct ? [y/n] "
+_save_worker
 }
 
 _check_screen ()
@@ -159,7 +238,6 @@ fi
 _start_worker ()
 {
 worker_screen_list=$(screen -ls)
-pwd
 echo "Starting worker $1..."
 screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword -t $nbthreads
 echo
@@ -168,36 +246,58 @@ if [[ $(screen -ls) == *"$1"* ]]; then
 else
 	echo "[ERROR] $1 has NOT been started !"
 fi
+sleep 5
+_back_to_begin
 }
 
 _stop_worker () {
-if [[ $(screen -ls) == *"$1"* ]]; then
+workers=$(screen -ls | grep "pastaminer" | cut -d . -f2 | cut -d "(" -f1)
+if [[ "$workers" == *"$1"* ]]; then
+	echo
 	echo "$1 has been found."
 	echo "Killing it..."
 	screen -X -S $1 kill
-	if [[ ! $(screen -ls) == *"$1"* ]]; then
-		echo "$1 has been stopped !"
+	echo
+	if [ ! "$workers" == *"$1"* ]; then
+		echo "[SUCCESS] $1 has been stopped !"
 	else
-		echo "[ERROR]I can't kill it... !"
+		echo "[ERROR] I can't kill it !"
 	fi
 else
 echo "There is no ACTIVE worker called $1"
 fi
+echo
+echo "Come back to the menu in 5sec..."
+sleep 5
 _main_menu
 }
 
-_delete_worker ()
-{
-echo "STOP"
+_ask_delete_worker () {
+echo
+_ask_question_yn "Are you really sure to delete $1 ? [y/n]"
+_delete_worker
+}
+
+_delete_worker () {
+echo
+if [ "$answer" == "y" ]; then
+	echo "Checking if $1 is currently running..."
+	_stop_worker $1
+else
+	echo "Nothing to do."
+	_back_to_begin
+fi
+sleep 5
+_back_to_begin
 }
 
 _ask_worker_name ()
 {
 UUID=$RANDOM
-read -p "How do you want to name your worker ? (if not pastaminer-$UUID-$coin will be used)" worker_name
-if [ "$worker_name" == "" ]; then
-	worker_name="pastaminer-$UUID-$coin"
-	echo "So let's use $worker_name"
+read -p "How do you want to name your worker ? (if not pastaminer-$UUID-$coin will be used)" workername
+if [ "$workername" == "" ]; then
+	workername="pastaminer-$UUID-$coin"
+	echo "So let's use $workername"
 else
 	echo "What a beautiful name ! "
 fi
@@ -231,8 +331,7 @@ _ask_worker_name
 echo
 _ask_resume
 echo
-_start_worker $worker_name
-echo
+_start_worker $workername
 }
 
 _back_to_begin ()
@@ -350,5 +449,6 @@ fi
 # MAIN MENU
 _check_flag_folder
 _intro
+_worker_status_widget
 _check_cpuminer
 _main_menu
