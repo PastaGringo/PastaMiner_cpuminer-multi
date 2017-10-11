@@ -1,13 +1,15 @@
 #!/bin/bash
 # VARIABLES
-version=0.02
-#workers=$(screen -ls | grep "pastaminer" | cut -d . -f2 | cut -d "(" -f1)
+version=0.03
 
 # FUNCTIONS
 _intro ()
 {
 echo
 echo "Welcome to PastaMiner v$version ! (with cpuminer-multi)"
+echo
+echo "To do:"
+echo "- -u UserName.WorkerName -p WorkerPassword"
 echo
 echo "Coins supported :"
 echo "- XMR (Monero)"
@@ -26,7 +28,6 @@ _root
 }
 
 _worker_status_widget () {
-#workers=$(screen -ls | grep "pastaminer" | cut -d . -f2 | cut -d "(" -f1)
 workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
 if [ ! "$workers" == "" ]; then
 	echo "Worker Name              State           Coin    Server Pool             CPU Threads "
@@ -55,16 +56,20 @@ fi
 
 _ask_coin ()
 {
+echo "----------------------"
 echo "(Alt)coins available :"
+echo "----------------------"
 echo
 echo "1) XMR (Monero)"
 echo "2) DOGE (Dogecoin)"
+echo "3) BCN (Bytecoin)"
 echo "0) Back to the main menu"
 echo
-read -p "Which (alt)coin do you want to mine ? : " coin
+read -p "Which (alt)coin do you want to mine ? (choose a number) => " coin
 case "$coin" in
 	1 ) _default_pool_server XMR;;
 	2 ) _default_pool_server DOGE;;
+	3 ) _default_pool_server BCN;;
 	0 ) _root;;
 	* ) _fail;echo;${FUNCNAME[0]};;
 esac
@@ -151,13 +156,14 @@ fi
 
 _ask_nb_threads () {
 nbproc=$(nproc)
+echo "----------------------------------------------------------------------------"
 echo "You currently have $nbproc CPU that can be dedicated to your workers"
-echo
 echo "BE CAREFUL, surallocating threads is dangerous for your system !"
 echo "=> DO NOT exceed $nbproc (PastaMiner will not permit it)"
 echo "=> For safety, allocate $nbproc-1 threads to let your system breath a bit :)"
+echo "----------------------------------------------------------------------------"
 echo
-read -p "How many threads do you want to allocate to your worker ? " nbthreads
+read -p "How many threads do you want to allocate to your worker ? (entrer a number) =>" nbthreads
 echo "Ok, $nbthreads seems good !"
 }
 
@@ -175,6 +181,9 @@ if [ "$1" == "DOGE" ]; then
 	defaultserverpool="eu.multipool.us"
 	coin="DOGE"
 fi
+if [ "$1" == "BCN" ]; then
+	defaultserverpool="stratum.aikapool.com"
+fi
 }
 
 _ask_wallet ()
@@ -186,7 +195,7 @@ echo "Thanks"
 _ask_server_pool_password ()
 {
 if [ "$skippwd" == "" ]; then
-	read -p "Could you give me the server pool password if needed ? (if no password, press ENTER)" serverpoolpassword
+	read -p "Could you give me the server pool password if needed ? (if you don't want, please press ENTER)" serverpoolpassword
 	echo "Thanks for the password."
 else
 	echo "Password already known."
@@ -259,17 +268,22 @@ fi
 
 _start_worker ()
 {
-_get_worker_conf $1
-worker_screen_list=$(screen -ls)
-echo "Starting worker $1..."
-screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword -t $nbthreads
-echo
-if [[ $(screen -ls) == *"$1"* ]]; then
-	echo -e "[\e[32mSUCCESS\e[39m] $1 has been started !"
+if [ "$answer" == "yes" ]; then
+	echo
+	_get_worker_conf $1
+	worker_screen_list=$(screen -ls)
+	echo "Starting worker $1..."
+	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword -t $nbthreads
+	echo
+	if [[ $(screen -ls) == *"$1"* ]]; then
+		echo -e "[\e[32mSUCCESS\e[39m] $1 has been started !"
+	else
+		echo "[ERROR] $1 has NOT been started !"
+	fi
 else
-	echo "[ERROR] $1 has NOT been started !"
+	echo "Maybe next time !"
+	_return
 fi
-_return
 }
 
 _stop_worker () {
@@ -288,7 +302,9 @@ if [[ "$workers" == *"$1"* ]]; then
 else
 echo "There is no ACTIVE worker called $1"
 fi
+if [ ! "$removing" == "yes" ]; then
 _return
+fi
 }
 
 _ask_delete_worker () {
@@ -302,6 +318,7 @@ if [ "$answer" == "y" ]; then
 	echo "Checking if $1 is currently running..."
 	_check_state $1
 	if [ "$running" == "yes" ]; then
+		removing="yes"
 		_stop_worker $1
 	else
 		echo "$1 is not running !"
@@ -444,14 +461,6 @@ fi
 
 _check_cpuminer ()
 {
-#if [ ! -f .flags/.downloaded ]; then
-#	echo
-#	echo "cpuminer-multi not downloaded !"
-#	_ask_question_yn "Do you want to download it ? [y/n] "
-#	_download_cpuminer
-#else
-#	echo "[DEBUG] cpuminer-multi downloaded !"
-#fi
 if [ ! -f .flags/.installed ]; then
 	echo
 	echo ">>> cpuminer-multi is not installed !"
