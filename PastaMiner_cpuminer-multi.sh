@@ -38,7 +38,7 @@ if [ ! "$workers" == "" ]; then
 		echo "-------------------------------------------------------------------------------------"
 	done
 else
-	echo "There is no active worker."
+	echo -e "\e[1;4mThere is no active worker\e[39m"
 fi
 }
 
@@ -293,21 +293,29 @@ _return
 
 _ask_delete_worker () {
 echo
-_ask_question_yn "Are you really sure to delete $1 ? [y/n]"
-_delete_worker
+_ask_question_yn "Are you really sure to delete $1 ? [y/n] "
+_delete_worker $1
 }
 
 _delete_worker () {
-echo
 if [ "$answer" == "y" ]; then
 	echo "Checking if $1 is currently running..."
-	_stop_worker $1
+	_check_state $1
+	if [ "$running" == "yes" ]; then
+		_stop_worker $1
+	else
+		echo "$1 is not running !"
+	fi
+	echo
+	echo -e "\e[33mDeleting worker $1...\e[39m"
+	sed -i "/$1/d" workers.conf
+	echo
+	echo -e "[\e[32mSUCCESS\e[39m] $1 has been deleted !"
+	_return
 else
 	echo "Nothing to do."
-	_back_to_begin
+	_return
 fi
-sleep 5
-_back_to_begin
 }
 
 _ask_worker_name ()
@@ -395,9 +403,9 @@ if [ "$answer" == "y" ]; then
 	echo "Uninstalling PastaMiner_cpuminer-multi..."
 	rm -rf .flags cpuminer-multi
 	echo "PastaMiner_cpuminer-multi uninstalled !"
-	_back_to_begin
+	_return
 else
-	_back_to_begin
+	_return
 fi
 }
 
@@ -413,18 +421,6 @@ _ask_question_yn ()
 read -p "$1" answer
 echo
 }
-
-#_download_cpuminer ()
-#{
-#if [ "$answer" == "y" ]; then
-#	echo "Downloading cpuminer-multi..."
-#	git clone --quiet https://github.com/tpruvot/cpuminer-multi.git
-#	touch .flags/.downloaded
-#	echo "Downloaded !"
-#else
-#	exit
-#fi
-#}
 
 _install_cpuminer ()
 {
