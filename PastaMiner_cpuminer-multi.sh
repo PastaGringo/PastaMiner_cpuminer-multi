@@ -18,6 +18,13 @@ _fail () {
 echo -e "\e[31mWrong input !\e[39m"
 }
 
+_return () {
+echo
+echo -e "\e[33mBack to main menu in 3sec...\e[39m"
+sleep 3
+_root
+}
+
 _worker_status_widget () {
 #workers=$(screen -ls | grep "pastaminer" | cut -d . -f2 | cut -d "(" -f1)
 workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
@@ -38,8 +45,10 @@ fi
 _check_state () {
 if [[ $(screen -ls) == *"$1"* ]]; then
 	state=$(echo -e "\e[32mRUNNING\e[39m")
+	running="yes"
 else
 	state=$(echo -e "\e[31mNOT RUNNING\e[39m")
+	running="no"
 fi
 #echo "$1 is $state"
 }
@@ -62,11 +71,17 @@ esac
 }
 
 function _ask_worker_action () {
+_check_state $1
 echo
-echo "1) Start worker"
-echo "2) Stop worker"
-echo "3) Status worker"
-echo "4) Delete worker"
+if [ "$running" == "no" ]; then
+	echo "1) Start worker"
+	echo "3) Delete worker"
+	echo "0) Back to the main menu"
+else
+	echo "2) Stop worker"
+	echo "3) Delete worker"
+	echo "0) Back to the main menu"
+fi
 echo
 read -p "What do you want to do for $workerchoicename ? " workeraction
 _worker_action
@@ -76,9 +91,9 @@ _worker_action () {
 case "$workeraction" in
 	1 ) _start_worker $workerchoicename;;
 	2 ) _stop_worker $workerchoicename;;
-	3 ) _worker_status $workerchoicename;;
-	4 ) _ask_delete_worker $workerchoicename;;
-	* ) _root;;
+	3 ) _ask_delete_worker $workerchoicename;;
+	0 ) _root;;
+	* ) _fail;_ask_worker_action;;
 esac
 }
 
@@ -130,7 +145,7 @@ if [ "$workerchoice" == "" ]; then
 else
 	echo "You choose ${workers_array[$indexminus1]}"
 	workerchoicename="${workers_array[$indexminus1]}"
-	_ask_worker_action
+	_ask_worker_action $workerchoicename
 fi
 }
 
@@ -244,17 +259,17 @@ fi
 
 _start_worker ()
 {
+_get_worker_conf $1
 worker_screen_list=$(screen -ls)
 echo "Starting worker $1..."
 screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword -t $nbthreads
 echo
 if [[ $(screen -ls) == *"$1"* ]]; then
-	echo "[SUCCESS] $1 has been started !"
+	echo -e "[\e[32mSUCCESS\e[39m] $1 has been started !"
 else
 	echo "[ERROR] $1 has NOT been started !"
 fi
-sleep 5
-_back_to_begin
+_return
 }
 
 _stop_worker () {
@@ -266,17 +281,14 @@ if [[ "$workers" == *"$1"* ]]; then
 	screen -X -S $1 kill
 	echo
 	if [ ! "$workers" == *"$1"* ]; then
-		echo "[SUCCESS] $1 has been stopped !"
+		echo -e "[\e[32mSUCCESS\e[39m] $1 has been stopped !"
 	else
 		echo "[ERROR] I can't kill it !"
 	fi
 else
 echo "There is no ACTIVE worker called $1"
 fi
-echo
-echo "Come back to the menu in 5sec..."
-sleep 5
-_main_menu
+_return
 }
 
 _ask_delete_worker () {
@@ -350,6 +362,8 @@ _start_worker $workername
 _main_menu ()
 {
 echo
+echo "Available tasks :"
+echo
 echo "1) Add worker wizard"
 echo "2) Manage worker (start/stop/delete)"
 echo "3) Enable Plex Stream Watch"
@@ -363,8 +377,8 @@ read -p "What do you want to do ? " choice
 case "$choice" in
 	1 ) echo;_easy_mode_wizard;;
 	2 ) echo;_ask_manage_worker;;
-	3 );;
-	8 );;
+	3 ) echo "Not implemented yet.";sleep 3;_root;;
+	8 ) echo "Not implemented yet.";sleep 3;_root;;
 	9 ) _uninstall_pastaminer;;
 	0 ) echo "See you! Bye.";echo;exit;;
 	* ) _back_to_begin;;
