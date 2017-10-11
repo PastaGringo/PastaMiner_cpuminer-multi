@@ -1,5 +1,4 @@
 #!/bin/bash
-clear
 # VARIABLES
 version=0.02
 #workers=$(screen -ls | grep "pastaminer" | cut -d . -f2 | cut -d "(" -f1)
@@ -13,6 +12,10 @@ echo
 echo "Coins supported :"
 echo "- XMR (Monero)"
 echo
+}
+
+_fail () {
+echo -e "\e[31mWrong input !\e[39m"
 }
 
 _worker_status_widget () {
@@ -47,11 +50,14 @@ echo "(Alt)coins available :"
 echo
 echo "1) XMR (Monero)"
 echo "2) DOGE (Dogecoin)"
+echo "0) Back to the main menu"
 echo
 read -p "Which (alt)coin do you want to mine ? : " coin
 case "$coin" in
 	1 ) _default_pool_server XMR;;
 	2 ) _default_pool_server DOGE;;
+	0 ) _root;;
+	* ) _fail;echo;${FUNCNAME[0]};;
 esac
 }
 
@@ -72,6 +78,7 @@ case "$workeraction" in
 	2 ) _stop_worker $workerchoicename;;
 	3 ) _worker_status $workerchoicename;;
 	4 ) _ask_delete_worker $workerchoicename;;
+	* ) _root;;
 esac
 }
 
@@ -334,10 +341,11 @@ echo
 _start_worker $workername
 }
 
-_back_to_begin ()
-{
-clear && _check_flag_folder && _intro && _check_cpuminer && _main_menu
-}
+#_back_to_begin ()
+#{
+#_main_menu
+#clear && _check_flag_folder && _intro && _check_cpuminer && _main_menu
+#}
 
 _main_menu ()
 {
@@ -446,9 +454,14 @@ else
 fi
 }
 
+_root () {
 # MAIN MENU
+clear
 _check_flag_folder
 _intro
 _worker_status_widget
 _check_cpuminer
 _main_menu
+}
+
+_root
