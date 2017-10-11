@@ -56,9 +56,9 @@ fi
 
 _ask_coin ()
 {
-echo "----------------------"
-echo "(Alt)coins available :"
-echo "----------------------"
+echo "--------------------------------------------------------------------------"
+echo "				(Alt)coins available :				"
+echo "--------------------------------------------------------------------------"
 echo
 echo "1) XMR (Monero)"
 echo "2) DOGE (Dogecoin)"
@@ -188,6 +188,10 @@ fi
 
 _ask_wallet ()
 {
+echo "------------------------------------------------------------------"
+echo " 				$coin WALLET   				"
+echo "------------------------------------------------------------------"
+echo
 read -p "Could you give me your wallet please ? : " wallet
 echo "Thanks"
 }
@@ -214,13 +218,29 @@ read -p "Could you give the pool server name URL (ie : pool.serverpool.com ) ple
 echo "Thanks"
 }
 
+_ask_server_pool_user_password () {
+_ask_question_yn "Does the server mining pool force to have a registered account to mine ? [y/n] => "
+if [ "$answer" == "yes" ]; then
+	ask_server_pool_username
+	ask_server_pool_password
+else
+	echo "Ouf."
+fi
+}
+
 _ask_server_pool ()
 {
+echo "------------------------------------------------------------------"
+echo "				SERVER MINING POOL			"
+echo "------------------------------------------------------------------"
+echo
 _ask_question_yn "Do you want to set a custom mining pool ? (you will also need to know the PORTS) [y/n] "
 if [ "$answer" == "y" ]; then
 	_ask_server_pool_name
 	echo
 	_ask_server_pool_port
+	echo
+	_ask_server_pool_user_password
 else
 	echo "We will use $defaultserverpool for mining ;)"
 	serverpool=$defaultserverpool
@@ -240,7 +260,9 @@ fi
 
 _ask_resume ()
 {
-echo "With the info you gave me, I can resume the miner with this settings :"
+echo "----------------------------------------------------------"
+echo "         			RESUME				"
+echo "----------------------------------------------------------"
 echo
 echo "(Alt)coin : $coin"
 echo "CPU threads : $nbthreads"
@@ -406,7 +428,7 @@ case "$choice" in
 	8 ) echo "Not implemented yet.";sleep 3;_root;;
 	9 ) _uninstall_pastaminer;;
 	0 ) echo "See you! Bye.";echo;exit;;
-	* ) _back_to_begin;;
+	* ) _return;;
 esac
 echo
 
