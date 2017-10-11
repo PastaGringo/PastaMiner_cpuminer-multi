@@ -22,13 +22,13 @@ _worker_status_widget () {
 #workers=$(screen -ls | grep "pastaminer" | cut -d . -f2 | cut -d "(" -f1)
 workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
 if [ ! "$workers" == "" ]; then
-	#echo "-------------------------------------------------------------------------------------------------------------------------------------------------------"
-	echo " Worker name Status Miner pool Wallet "
-	echo "-----------------------------------------------------------------------------------------------------------------------------------------------------------"
+	echo "Worker Name              State           Coin    Server Pool             CPU Threads "
+	echo "-------------------------------------------------------------------------------------"
 	for worker in $workers; do
 		_check_state $worker
-		echo "| $worker | $state | | |"
-		echo "-----------------------------------------------------------------------------------------------------------------------------------------------------------"
+		_get_worker_conf $worker
+		echo "| $workername	| $state	| $coin	| $serverpool	| $cputhreads	    |"
+		echo "-------------------------------------------------------------------------------------"
 	done
 else
 	echo "There is no active worker."
@@ -448,9 +448,9 @@ if [ ! -f .flags/.installed ]; then
 	echo
 	_ask_question_yn "Do you want to install it ? [y/n] "
 	_install_cpuminer
-else
-	echo
-	echo "[DEBUG] cpuminer-multi IS installed !"
+#else
+	#echo
+	#echo "[DEBUG] cpuminer-multi IS installed !"
 fi
 }
 
