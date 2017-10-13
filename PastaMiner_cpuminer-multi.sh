@@ -3,7 +3,7 @@
 version=0.03
 
 _line_title () {
-echo "******************************** $1 ********************************"
+echo "********** $1 **********"
 }
 
 #NEW WIZARD
@@ -91,11 +91,7 @@ _intro ()
 echo
 echo "Welcome to PastaMiner v$version ! (with cpuminer-multi)"
 echo
-echo "To do:"
-echo "- -u UserName.WorkerName -p WorkerPassword"
-echo
-echo "Coins supported :"
-echo "- XMR (Monero)"
+echo "Coins supported : XMR - DOGE - XVG - BTC"
 echo
 }
 
@@ -113,13 +109,13 @@ _root
 _worker_status_widget () {
 workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
 if [ ! "$workers" == "" ]; then
-	echo "Worker Name              State           Coin    Server Pool             CPU Threads "
-	echo "-------------------------------------------------------------------------------------"
+	echo "Worker Name              State           Coin    Server Pool    CPU Threads "
+	echo "-----------------------------------------------------------------------------"
 	for worker in $workers; do
 		_check_state $worker
 		_get_worker_conf $worker
 		echo "| $workername	| $state	| $coin	| $poolname	| $cputhreads	    |"
-		echo "-------------------------------------------------------------------------------------"
+		echo "-----------------------------------------------------------------------------"
 	done
 else
 	echo -e "\e[1;4mThere is no active worker\e[39m"
@@ -148,6 +144,8 @@ echo "1) XMR (Monero)"
 echo "2) DOGE (Dogecoin)"
 echo "3) BCN (Bytecoin)"
 echo "4) XVG (Vedge)"
+echo "5) VTC (VertCoin)"
+echo
 echo "0) Back to the main menu"
 echo
 read -p "Which (alt)coin do you want to mine ? (choose a number) => " coin
@@ -156,6 +154,7 @@ case "$coin" in
 	2 ) _default_pool_server DOGE;;
 	3 ) _default_pool_server BCN;;
 	4 ) _default_pool_server XVG;;
+	5 ) _default_pool_server VTC;;
 	0 ) _root;;
 	* ) _fail;echo;${FUNCNAME[0]};;
 esac
@@ -282,6 +281,10 @@ fi
 if [ "$1" == "XVG" ]; then
 	coin="XVG"
 	algorithm="scrypt"
+fi
+if [ "$1" == "VTC" ]; then
+	coin="VTC"
+	algorithm="lyra2REv2"
 fi
 }
 
