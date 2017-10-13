@@ -2,17 +2,52 @@
 # VARIABLES
 version=0.03
 
+_line_title () {
+echo "******************************** $1 ********************************"
+}
+
 #NEW WIZARD
 _ask_resume () {
 echo
-echo $poolname
-echo $poolserverurl
+_line_title "Résumé"
+echo "Coin : $coin"
+echo "Worker Name : $workername"
+echo "CPU threads : $nbthreads"
+echo "Algorithm : $algorithm"
+echo "Pool Name : $poolname"
+echo "Pool URL : $poolserverurl"
+echo "Pool ports : $poolserverports"
+#echo "Wallet : $wallet"
+echo "Registered ? $registration"
 if [ "$registration" == "yes" ]; then
-	echo $poolusername
-	echo $poolworkername
-	echo $poolworkerpassword
+	echo "Pool User Account : $poolusername"
+	echo "Pool worker password : $poolworkerpassword"
+else
+	echo "Pool server password : $poolserverpassword"
+	echo "Wallet : $wallet"
 fi
-_ask_question "Is it OK ? [y/n] " answer
+_ask_question "Is it OK ? [y/n] => " answer
+_save_worker
+}
+
+_easy_mode_wizard () {
+_ask_coin
+_ask_nb_threads
+echo
+_ask_worker_name
+_ask_server_pool
+echo
+#_ask_wallet
+echo
+#_ask_worker_name
+echo
+echo
+#_ask_wallet
+echo #_ask_worker_name
+echo
+_ask_resume
+echo
+_start_worker $workername
 }
 
 _ask_question () {
@@ -21,28 +56,30 @@ read -p "$1" $2
 }
 
 _server_pool_basics_question () {
-_ask_question "What is the miner server pool name ? " poolname
-_ask_question "What is the miner server pool URL ? " poolserverurl
+_ask_question "What is the miner server pool name ? (ie : "MineXMR" or "AikaPool") => " poolname
+_ask_question "What is the miner server pool URL ? (ie : "pool.minexmr.com" or "stratum.aikapool.com" or etc.) => " poolserverurl
+_ask_question "What is the port(s) used for miner server pool ? (ie : "7777" or "7938" or etc.) => " poolserverports
 }
 
 _registration_server_pool () {
-_server_pool_basics_question
-_ask_question "Could you give me the username used from $poolname ? " poolusername
-_ask_question "Could you give me the worker name used from $poolname ? " poolworkername
-_ask_question "Could you give me the worker password for $poolworkername from $poolname ? " poolworkerpassword
+_ask_question "Could you give me your USERNAME used on $poolname ? => " poolusername
+_ask_question "Could you give me the WORKER PASSWORD for $workername from $poolname ? => " poolworkerpassword
 }
 
 _noregistration_server_pool () {
-_server_pool_basics_question
+_ask_wallet
+_ask_question "Could you give me the server pool password if needed ? (if you don't want, please press ENTER)" poolserverpassword
 }
 
 _ask_server_pool () {
 _ask_question "Do you wan to use a mining server pool which needs registration to mine ? [y/n] " answer
-echo $answer
 if [ "$answer" == "y" ]; then
 	registration="yes"
+	_server_pool_basics_question
 	_registration_server_pool
 else
+	registration="no"
+	_server_pool_basics_question
 	_noregistration_server_pool
 fi
 }
@@ -81,7 +118,7 @@ if [ ! "$workers" == "" ]; then
 	for worker in $workers; do
 		_check_state $worker
 		_get_worker_conf $worker
-		echo "| $workername	| $state	| $coin	| $serverpool	| $cputhreads	    |"
+		echo "| $workername	| $state	| $coin	| $poolname	| $cputhreads	    |"
 		echo "-------------------------------------------------------------------------------------"
 	done
 else
@@ -102,13 +139,15 @@ fi
 
 _ask_coin ()
 {
-echo "--------------------------------------------------------------------------"
-echo "				(Alt)coins available :				"
-echo "--------------------------------------------------------------------------"
+#echo "--------------------------------------------------------------------------"
+#echo "				(Alt)coins available :				"
+#echo "--------------------------------------------------------------------------"
+_line_title "(Alt)coins available :"
 echo
 echo "1) XMR (Monero)"
 echo "2) DOGE (Dogecoin)"
 echo "3) BCN (Bytecoin)"
+echo "4) XVG (Vedge)"
 echo "0) Back to the main menu"
 echo
 read -p "Which (alt)coin do you want to mine ? (choose a number) => " coin
@@ -116,9 +155,11 @@ case "$coin" in
 	1 ) _default_pool_server XMR;;
 	2 ) _default_pool_server DOGE;;
 	3 ) _default_pool_server BCN;;
+	4 ) _default_pool_server XVG;;
 	0 ) _root;;
 	* ) _fail;echo;${FUNCNAME[0]};;
 esac
+echo
 }
 
 function _ask_worker_action () {
@@ -160,13 +201,20 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 	fi
 done < workers.conf
 workername=$(echo $workerconf | cut -f1 -d";")
-coin=$(echo $workerconf | cut -f2 -d";")
+registration=$(echo $workerconf | cut -f2 -d";")
 cputhreads=$(echo $workerconf | cut -f3 -d";")
-serverpool=$(echo $workerconf | cut -f4 -d";")
+coin=$(echo $workerconf | cut -f4 -d";")
 algorithm=$(echo $workerconf | cut -f5 -d";")
-ports=$(echo $workerconf | cut -f6 -d";")
-poolpassword=$(echo $workerconf | cut -f7 -d";")
-wallet=$(echo $workerconf | cut -f8 -d";")
+poolname=$(echo $workerconf | cut -f6 -d";")
+poolserverurl=$(echo $workerconf | cut -f7 -d";")
+poolserverports=$(echo $workerconf | cut -f8 -d";")
+if [ $(echo $workerconf | cut -f2 -d";") == "y" ]; then
+	poolusername=$(echo $workerconf | cut -f9 -d";")
+	poolworkerpassword=$(echo $workerconf | cut -f10 -d";")
+else
+	poolserverpasswrd=$(echo $workerconf | cut -f9 -d";")
+	wallet=$(echo $workerconf | cut -f10 -d";")
+fi
 }
 
 _ask_manage_worker () {
@@ -209,13 +257,14 @@ echo "=> DO NOT exceed $nbproc (PastaMiner will not permit it)"
 echo "=> For safety, allocate $nbproc-1 threads to let your system breath a bit :)"
 echo "----------------------------------------------------------------------------"
 echo
-read -p "How many threads do you want to allocate to your worker ? (entrer a number) =>" nbthreads
+read -p "How many threads do you want to allocate to your worker ? (entrer a number) => " nbthreads
 echo "Ok, $nbthreads seems good !"
 }
 
 _default_pool_server ()
 {
 if [ "$1" == "XMR" ]; then
+	defaultpoolname="MineXMR"
 	defaultserverpool="pool.minexmr.com"
 	ports="4444,5555"
 	serverpoolpassword="x"
@@ -230,13 +279,15 @@ fi
 if [ "$1" == "BCN" ]; then
 	defaultserverpool="stratum.aikapool.com"
 fi
+if [ "$1" == "XVG" ]; then
+	coin="XVG"
+	algorithm="scrypt"
+fi
 }
 
 _ask_wallet ()
 {
-echo "------------------------------------------------------------------"
-echo " 				$coin WALLET   				"
-echo "------------------------------------------------------------------"
+_line_title "$coin WALLET"
 echo
 read -p "Could you give me your wallet please ? : " wallet
 echo "Thanks"
@@ -274,54 +325,73 @@ else
 fi
 }
 
-_ask_server_pool ()
-{
-echo "------------------------------------------------------------------"
-echo "				SERVER MINING POOL			"
-echo "------------------------------------------------------------------"
-echo
-_ask_question_yn "Do you want to set a custom mining pool ? (you will also need to know the PORTS) [y/n] "
-if [ "$answer" == "y" ]; then
-	_ask_server_pool_name
-	echo
-	_ask_server_pool_port
-	echo
-	_ask_server_pool_user_password
-else
-	echo "We will use $defaultserverpool for mining ;)"
-	serverpool=$defaultserverpool
-fi
-echo
-_ask_server_pool_password
+#_ask_server_pool ()
+#{
+#echo "------------------------------------------------------------------"
+#echo "				SERVER MINING POOL			"
+#echo "------------------------------------------------------------------"
+#echo
+#_ask_question_yn "Do you want to set a custom mining pool ? (you will also need to know the PORTS) [y/n] "
+#if [ "$answer" == "y" ]; then
+#	_ask_server_pool_name
+#	echo
+#	_ask_server_pool_port
+#	echo
+#	_ask_server_pool_user_password
+#else
+#	echo "We will use $defaultserverpool for mining ;)"
+#	serverpool=$defaultserverpool
+#fi
+#echo
+#_ask_server_pool_password
+#}
+
+_save_worker_with_account () {
+echo "[DEBUG] $workername;$registration;$nbthreads;$coin;$algorithm;$poolname;$poolserverurl;$poolserverports;$poolusername;$poolworkerpassword"
+cat >>workers.conf <<EOL
+$workername;$registration;$nbthreads;$coin;$algorithm;$poolname;$poolserverurl;$poolserverports;$poolusername;$poolworkerpassword
+EOL
+}
+
+_save_worker_without_account () {
+echo "[DEBUG] $workername;$registration;$nbthreads;$coin;$algorithm;$poolname;$poolserverurl;$poolserverports;$poolserverpassword;$wallet"
+cat >>workers.conf <<EOL
+$workername;$registration;$nbthreads;$coin;$algorithm;$poolname;$poolserverurl;$poolserverports;$poolserverpassword;$wallet
+EOL
 }
 
 _save_worker () {
 if [ "$answer" == "y" ]; then
 echo "Saving the worker configuration localy..."
-cat >>workers.conf <<EOL
-$workername;$coin;$nbthreads;$serverpool;$algorithm;$ports;$serverpoolpassword;$wallet
-EOL
+echo "[DEBUG] Registration = $answer"
+	if [ "$registration" == "y" ]; then
+		_save_worker_with_account
+	else
+		_save_worker_without_account
+	fi
+else
+	echo "[_SAVE_WORKER] Maybe another time ;)"
 fi
 }
 
-_ask_resume ()
-{
-echo "----------------------------------------------------------"
-echo "         			RESUME				"
-echo "----------------------------------------------------------"
-echo
-echo "(Alt)coin : $coin"
-echo "CPU threads : $nbthreads"
-echo "Server pool URL : $serverpool"
-echo "Coin algorithm : $algorithm"
-echo "Server pool port(s) : $ports"
-echo "Server pool password : $serverpoolpassword"
-echo "Your wallet : $wallet"
-echo "Worker name : $workername"
-echo
-_ask_question_yn "All of this information are correct ? [y/n] "
-_save_worker
-}
+#_ask_resume ()
+#{
+#echo "----------------------------------------------------------"
+#echo "         			RESUME				"
+#echo "----------------------------------------------------------"
+#echo
+#echo "(Alt)coin : $coin"
+#echo "CPU threads : $nbthreads"
+#echo "Server pool URL : $serverpool"
+#echo "Coin algorithm : $algorithm"
+#echo "Server pool port(s) : $ports"
+#echo "Server pool password : $serverpoolpassword"
+#echo "Your wallet : $wallet"
+#echo "Worker name : $workername"
+#echo
+#_ask_question_yn "All of this information are correct ? [y/n] "
+#_save_worker
+#}
 
 _check_screen ()
 {
@@ -336,12 +406,21 @@ fi
 
 _start_worker ()
 {
-if [ "$answer" == "yes" ]; then
+if [ "$answer" == "y" ]; then
 	echo
 	_get_worker_conf $1
 	worker_screen_list=$(screen -ls)
 	echo "Starting worker $1..."
-	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$defaultserverpool:$ports -u $wallet -p $serverpoolpassword -t $nbthreads
+	echo "[DEBUG] registration = $registration"
+	if [ ! "$registration" == "yes" ]; then
+	echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads"
+	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads
+	echo "$1 $algorithm $poolserverurl $poolserverports $wallet $poolserverpassword $nbthreads"
+	else
+	echo $algorithm
+	echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads"
+	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads
+	fi
 	echo
 	if [[ $(screen -ls) == *"$1"* ]]; then
 		echo -e "[\e[32mSUCCESS\e[39m] $1 has been started !"
@@ -427,30 +506,6 @@ else
 	echo "Worker $1 already started !"
 fi
 }
-
-_easy_mode_wizard ()
-{
-_ask_coin
-echo "$coin is a good choice !"
-echo
-_ask_nb_threads
-echo
-_ask_server_pool
-echo
-_ask_wallet
-echo
-_ask_worker_name
-echo
-_ask_resume
-echo
-_start_worker $workername
-}
-
-#_back_to_begin ()
-#{
-#_main_menu
-#clear && _check_flag_folder && _intro && _check_cpuminer && _main_menu
-#}
 
 _main_menu ()
 {
