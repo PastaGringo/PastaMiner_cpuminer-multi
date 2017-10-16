@@ -37,14 +37,6 @@ echo
 _ask_worker_name
 _ask_server_pool
 echo
-#_ask_wallet
-echo
-#_ask_worker_name
-echo
-echo
-#_ask_wallet
-echo #_ask_worker_name
-echo
 _ask_resume
 echo
 _start_worker $workername
@@ -93,6 +85,18 @@ echo "Welcome to PastaMiner v$version ! (with cpuminer-multi)"
 echo
 echo "Coins supported : XMR - DOGE - XVG - BTC"
 echo
+_check_plex_streams_watch
+}
+
+_check_plex_streams_watch () {
+
+if [ -f .flags/.plex_streams_watch_enabled ]; then
+	echo "PLEX STREAMS WATCH ENABLED !"
+	echo
+else
+	echo "PLEX STREAMS WATCH DISABLED !"
+	echo
+fi
 }
 
 _fail () {
@@ -180,18 +184,13 @@ _worker_action
 
 _worker_action () {
 case "$workeraction" in
-	1 ) _start_worker $workerchoicename;;
+	1 ) _ask_question_yn "Are you sure to start the worker $workerchoicename ? [y/n] => ";_start_worker $workerchoicename;;
 	2 ) _stop_worker $workerchoicename;;
 	3 ) _ask_delete_worker $workerchoicename;;
 	0 ) _root;;
 	* ) _fail;_ask_worker_action;;
 esac
 }
-
-#_get_workers_list () {
-#workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
-#
-#}
 
 _get_worker_conf () {
 while IFS='' read -r line || [[ -n "$line" ]]; do
@@ -290,9 +289,10 @@ fi
 
 _ask_wallet ()
 {
+echo
 _line_title "$coin WALLET"
 echo
-read -p "Could you give me your wallet please ? : " wallet
+read -p "Could you give me your wallet (OR EMAIL) please ? : " wallet
 echo "Thanks"
 }
 
@@ -328,27 +328,6 @@ else
 fi
 }
 
-#_ask_server_pool ()
-#{
-#echo "------------------------------------------------------------------"
-#echo "				SERVER MINING POOL			"
-#echo "------------------------------------------------------------------"
-#echo
-#_ask_question_yn "Do you want to set a custom mining pool ? (you will also need to know the PORTS) [y/n] "
-#if [ "$answer" == "y" ]; then
-#	_ask_server_pool_name
-#	echo
-#	_ask_server_pool_port
-#	echo
-#	_ask_server_pool_user_password
-#else
-#	echo "We will use $defaultserverpool for mining ;)"
-#	serverpool=$defaultserverpool
-#fi
-#echo
-#_ask_server_pool_password
-#}
-
 _save_worker_with_account () {
 echo "[DEBUG] $workername;$registration;$nbthreads;$coin;$algorithm;$poolname;$poolserverurl;$poolserverports;$poolusername;$poolworkerpassword"
 cat >>workers.conf <<EOL
@@ -377,25 +356,6 @@ else
 fi
 }
 
-#_ask_resume ()
-#{
-#echo "----------------------------------------------------------"
-#echo "         			RESUME				"
-#echo "----------------------------------------------------------"
-#echo
-#echo "(Alt)coin : $coin"
-#echo "CPU threads : $nbthreads"
-#echo "Server pool URL : $serverpool"
-#echo "Coin algorithm : $algorithm"
-#echo "Server pool port(s) : $ports"
-#echo "Server pool password : $serverpoolpassword"
-#echo "Your wallet : $wallet"
-#echo "Worker name : $workername"
-#echo
-#_ask_question_yn "All of this information are correct ? [y/n] "
-#_save_worker
-#}
-
 _check_screen ()
 {
 if [[ $(screen -ls) == *"$1"* ]]; then
@@ -414,14 +374,14 @@ if [ "$answer" == "y" ]; then
 	_get_worker_conf $1
 	worker_screen_list=$(screen -ls)
 	echo "Starting worker $1..."
-	echo "[DEBUG] registration = $registration"
+	#echo "[DEBUG] registration = $registration"
 	if [ ! "$registration" == "yes" ]; then
-	echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads"
+	#echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads"
 	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads
-	echo "$1 $algorithm $poolserverurl $poolserverports $wallet $poolserverpassword $nbthreads"
+	#echo "$1 $algorithm $poolserverurl $poolserverports $wallet $poolserverpassword $nbthreads"
 	else
-	echo $algorithm
-	echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads"
+	#echo $algorithm
+	#echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads"
 	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads
 	fi
 	echo
@@ -430,6 +390,7 @@ if [ "$answer" == "y" ]; then
 	else
 		echo "[ERROR] $1 has NOT been started !"
 	fi
+	_return
 else
 	echo "Maybe next time !"
 	_return
@@ -510,6 +471,28 @@ else
 fi
 }
 
+_plex_streams_watch_enable () {
+echo
+echo "Activating Plex Streams Watch..."
+touch .flags/.plex_streams_watch_enabled
+if [ -f .flags/.plex_streams_watch_enabled ]; then
+	echo "Plex Streams Wtach enabled !"
+else
+	echo "Can't enable Plex Streams Watch !"
+fi
+_return
+}
+
+_plex_streams_watch_disable () {
+echo
+echo "Deactivating Plex Stream Watch..."
+if [ -f .flags/.plex_streams_watch_enabled ]; then
+	rm .flags/.plex_streams_watch_enabled
+	echo "Plex Streams Wtach has been disabled !"
+fi
+_return
+}
+
 _main_menu ()
 {
 echo
@@ -517,7 +500,8 @@ echo "Available tasks :"
 echo
 echo "1) Add worker wizard"
 echo "2) Manage worker (start/stop/delete)"
-echo "3) Enable Plex Stream Watch"
+echo "3) Enable Plex Streams Watch"
+echo "4) Disable Plex Streams Watch"
 echo
 echo "7) Reinstall cpuminer-multi from latest updates"
 echo "8) Update PastaMiner_cpuminer-multi"
@@ -528,14 +512,14 @@ read -p "What do you want to do ? " choice
 case "$choice" in
 	1 ) echo;_easy_mode_wizard;;
 	2 ) echo;_ask_manage_worker;;
-	3 ) echo "Not implemented yet.";sleep 3;_root;;
+	3 ) _plex_streams_watch_enable;;
+	4 ) _plex_streams_watch_disable;;
 	8 ) echo "Not implemented yet.";sleep 3;_root;;
 	9 ) _uninstall_pastaminer;;
 	0 ) echo "See you! Bye.";echo;exit;;
 	* ) _return;;
 esac
 echo
-
 }
 
 _uninstall_pastaminer ()
