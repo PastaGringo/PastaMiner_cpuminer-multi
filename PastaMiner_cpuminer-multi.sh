@@ -583,6 +583,45 @@ if [ ! -f .flags/.installed ]; then
 fi
 }
 
+_pastaminer_cli_howto () {
+echo "Welcome to the tiny Pastaminer_cpuminer-multi CLI."
+echo "Usage :"
+echo "Start all workers : $0 -startallworkers"
+echo "Stop all workers : $0 -stopallworkers"
+echo
+exit
+}
+
+_start_all_workers () {
+workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
+echo "Starting all workers !"
+for worker in $workers
+do
+	echo "Starting $worker"
+	_start_worker $worker
+done
+exit
+}
+
+_stop_all_workers () {
+workers=$(cat workers.conf | grep "pastaminer-" | cut -f1 -d";")
+echo "Stopping all workers !"
+for worker in $workers
+do
+	echo "Stopping $worker"
+	_stop_worker $worker
+done
+exit
+}
+
+if [ ! "$1" == "" ]; then
+	case $1 in
+		-startallworkers ) _start_all_workers;;
+		-stopallworkers ) _stop_all_workers;;
+		* ) echo;echo "Wrong argument.";echo;_pastaminer_cli_howto;;
+	esac
+fi
+
 _root () {
 # MAIN MENU
 clear

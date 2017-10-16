@@ -1,10 +1,13 @@
 #!/bin/bash
 
 # https://support.plex.tv/hc/en-us/articles/204059436-Finding-an-authentication-token-X-Plex-Token
-XPlexToken="YourXPlexToken"
+#XPlexToken="YourXPlexToken"
+
+XPlexToken=""
+trafficroboturl=""
 
 # https://telegram.me/trafficRobot
-trafficroboturl="YourTrafficRobotURL"
+#trafficroboturl="YourTrafficRobotURL"
 
 _check_plex_streams () {
 echo "---------------------------------------"
@@ -23,6 +26,7 @@ do
 			echo "Starting workers..."
 			mining="yes"
 			curl --silent -X POST -d "Start mining !" $trafficroboturl > /dev/null
+			./PastaMiner_cpuminer-multi.sh -startallworkers
 		else
 			echo "- CURRENTLY MINING -"
 		fi
@@ -31,6 +35,7 @@ do
 			echo "Stopping workers..."
 			mining=""
 			curl --silent -X POST -d "Stop mining !" $trafficroboturl > /dev/null
+			./PastaMiner_cpuminer-multi.sh -stopallworkers
 		else
 			echo "- PLEX STREAMS IN PROGRESS -"
 		fi
