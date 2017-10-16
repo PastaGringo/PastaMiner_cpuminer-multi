@@ -390,6 +390,9 @@ if [ "$answer" == "y" ]; then
 	else
 		echo "[ERROR] $1 has NOT been started !"
 	fi
+	if [ "$cli" == "yes" ]; then
+		exit
+	fi
 	_return
 else
 	echo "Maybe next time !"
@@ -412,6 +415,9 @@ if [[ "$workers" == *"$1"* ]]; then
 	fi
 else
 echo "There is no ACTIVE worker called $1"
+fi
+if [ "$cli" == "yes" ]; then
+exit
 fi
 if [ ! "$removing" == "yes" ]; then
 _return
@@ -616,8 +622,8 @@ exit
 
 if [ ! "$1" == "" ]; then
 	case $1 in
-		-startallworkers ) _start_all_workers;;
-		-stopallworkers ) _stop_all_workers;;
+		-startallworkers ) answer="y";cli="yes";_start_all_workers;;
+		-stopallworkers ) cli="yes";_stop_all_workers;;
 		* ) echo;echo "Wrong argument.";echo;_pastaminer_cli_howto;;
 	esac
 fi
