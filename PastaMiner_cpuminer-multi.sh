@@ -482,7 +482,8 @@ echo
 echo "Activating Plex Streams Watch..."
 touch .flags/.plex_streams_watch_enabled
 if [ -f .flags/.plex_streams_watch_enabled ]; then
-	echo "Plex Streams Wtach enabled !"
+	echo "Plex Streams Watch enabled !"
+	screen -dmS plexstreamswatcher ./plex_streams_watch.sh 
 else
 	echo "Can't enable Plex Streams Watch !"
 fi
@@ -493,6 +494,7 @@ _plex_streams_watch_disable () {
 echo
 echo "Deactivating Plex Stream Watch..."
 if [ -f .flags/.plex_streams_watch_enabled ]; then
+	screen -X -S plexstreamswatcher kill
 	rm .flags/.plex_streams_watch_enabled
 	echo "Plex Streams Wtach has been disabled !"
 fi
@@ -628,9 +630,20 @@ if [ ! "$1" == "" ]; then
 	esac
 fi
 
+function _show_ascii () {
+echo '                                                       __          _               _                  '
+echo '                                                     / _ \__ _ ___| |_ __ _  /\/\ (_)_ __   ___ _ __  '
+echo '                                                    / /_)/ _` / __| __/ _  |/    \| |  _ \ / _ \  __| '
+echo '                                                   / ___/ (_| \__ \ || (_| / /\/\ \ | | | |  __/ |    '
+echo '                                                   \/    \__,_|___/\__\__,_\/    \/_|_| |_|\___|_|    '
+echo
+echo "Current version : $version"
+}
+
 _root () {
 # MAIN MENU
 clear
+#_show_asci
 _check_flag_folder
 _intro
 _worker_status_widget
