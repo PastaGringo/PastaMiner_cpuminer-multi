@@ -1,8 +1,6 @@
 #!/bin/bash
 # VARIABLES
 version=0.03
-nbplexstreams=$(curl --silent localhost:32400/status/sessions?X-Plex-Token=$XPlexToken | grep '<MediaContainer' | cut -c23)
-XPlexToken=""
 
 _line_title () {
 echo "********** $1 **********"
@@ -120,7 +118,7 @@ if [ ! "$workers" == "" ]; then
 	for worker in $workers; do
 		_check_state $worker
 		_get_worker_conf $worker
-		echo "| $workername	| $state	| $coin	| $poolname	| $nbthreads      |"
+		echo "| $workername	| $state	| $coin	| $poolname	| $nbthreads         |"
 		echo "-----------------------------------------------------------------------------"
 	done
 else
@@ -396,7 +394,7 @@ if [ "$answer" == "y" ]; then
 	if [ ! "$registration" == "yes" ]; then
 	#echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads"
 	#sleep 30
-	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads
+	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads --api-bind 0
 		#echo "$1 $registration $cputhreads $coin $poolname $algorithm $poolserverurl $poolserverports $wallet $poolserverpassword $nbthreads"
 		#sleep 30
 	else
@@ -410,7 +408,7 @@ if [ "$answer" == "y" ]; then
 		#else
 			#echo "No plex stream stream right now, starting $1..."
 	#echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads"
-	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads
+	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads --api-bind 0
 		#fi
 	fi
 	echo
