@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# https://support.plex.tv/hc/en-us/articles/204059436-Finding-an-authentication-token-X-Plex-Token
-#XPlexToken="YourXPlexToken"
-
-#need to add waring if variables below are not filled.
-
 function _show_ascii () {
 echo '          __          _               _                  '
 echo '        / _ \__ _ ___| |_ __ _  /\/\ (_)_ __   ___ _ __  '
@@ -14,10 +9,13 @@ echo '      \/    \__,_|___/\__\__,_\/    \/_|_| |_|\___|_|    '
 echo
 }
 
+#need to add warning if variables below are not filled.
 
+# https://support.plex.tv/hc/en-us/articles/204059436-Finding-an-authentication-token-X-Plex-Token
+XPlexToken="YourXPlexToken"
 
 # https://telegram.me/trafficRobot
-#trafficroboturl="YourTrafficRobotURL"
+trafficroboturl="YourTrafficRobotURL"
 
 _check_plex_streams () {
 datee=$(date)

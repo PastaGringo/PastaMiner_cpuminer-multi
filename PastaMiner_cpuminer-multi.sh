@@ -1,6 +1,8 @@
 #!/bin/bash
 # VARIABLES
 version=0.03
+nbplexstreams=$(curl --silent localhost:32400/status/sessions?X-Plex-Token=$XPlexToken | grep '<MediaContainer' | cut -c23)
+XPlexToken=""
 
 _line_title () {
 echo "********** $1 **********"
@@ -83,7 +85,7 @@ _intro ()
 echo
 echo "Welcome to PastaMiner v$version ! (with cpuminer-multi)"
 echo
-echo "Coins supported : XMR - DOGE - XVG - BTC"
+echo "Coins supported : XMR - DASH"
 echo
 _check_plex_streams_watch
 }
@@ -118,7 +120,7 @@ if [ ! "$workers" == "" ]; then
 	for worker in $workers; do
 		_check_state $worker
 		_get_worker_conf $worker
-		echo "| $workername	| $state	| $coin	| $poolname	| $cputhreads	    |"
+		echo "| $workername	| $state	| $coin	| $poolname	| $nbthreads      |"
 		echo "-----------------------------------------------------------------------------"
 	done
 else
@@ -149,6 +151,8 @@ echo "2) DOGE (Dogecoin)"
 echo "3) BCN (Bytecoin)"
 echo "4) XVG (Vedge)"
 echo "5) VTC (VertCoin)"
+echo "6) DASH (DASH/x11)"
+echo "7) START (Startcoin)"
 echo
 echo "0) Back to the main menu"
 echo
@@ -159,6 +163,8 @@ case "$coin" in
 	3 ) _default_pool_server BCN;;
 	4 ) _default_pool_server XVG;;
 	5 ) _default_pool_server VTC;;
+	6 ) _default_pool_server DASH;;
+	7 ) _default_pool_server START;;
 	0 ) _root;;
 	* ) _fail;echo;${FUNCNAME[0]};;
 esac
@@ -184,8 +190,8 @@ _worker_action
 
 _worker_action () {
 case "$workeraction" in
-	1 ) _ask_question_yn "Are you sure to start the worker $workerchoicename ? [y/n] => ";_start_worker $workerchoicename;;
-	2 ) _stop_worker $workerchoicename;;
+	1 ) _ask_question_yn "Are you sure to start the worker $workerchoicename ? [y/n] => ";_start_worker $workerchoicename;_return;;
+	2 ) _stop_worker $workerchoicename;_return;;
 	3 ) _ask_delete_worker $workerchoicename;;
 	0 ) _root;;
 	* ) _fail;_ask_worker_action;;
@@ -200,18 +206,18 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 done < workers.conf
 workername=$(echo $workerconf | cut -f1 -d";")
 registration=$(echo $workerconf | cut -f2 -d";")
-cputhreads=$(echo $workerconf | cut -f3 -d";")
+nbthreads=$(echo $workerconf | cut -f3 -d";")
 coin=$(echo $workerconf | cut -f4 -d";")
 algorithm=$(echo $workerconf | cut -f5 -d";")
 poolname=$(echo $workerconf | cut -f6 -d";")
 poolserverurl=$(echo $workerconf | cut -f7 -d";")
 poolserverports=$(echo $workerconf | cut -f8 -d";")
-if [ $(echo $workerconf | cut -f2 -d";") == "y" ]; then
+if [ $(echo $workerconf | cut -f2 -d";") == "yes" ]; then
 	poolusername=$(echo $workerconf | cut -f9 -d";")
 	poolworkerpassword=$(echo $workerconf | cut -f10 -d";")
 else
-	poolserverpasswrd=$(echo $workerconf | cut -f9 -d";")
-	wallet=$(echo $workerconf | cut -f10 -d";")
+	wallet=$(echo $workerconf | cut -f9 -d";")
+	poolserverpassword=$(echo $workerconf | cut -f10 -d";")
 fi
 }
 
@@ -261,6 +267,16 @@ echo "Ok, $nbthreads seems good !"
 
 _default_pool_server ()
 {
+if [ "$1" == "START" ]; then
+        defaultserverpool="eu.multipool.us"
+	algorithm="x11"
+        coin="START"
+fi
+if [ "$1" == "DASH" ]; then
+        defaultserverpool="eu.multipool.us"
+	algorithm="x11"
+        coin="DASH"
+fi
 if [ "$1" == "XMR" ]; then
 	defaultpoolname="MineXMR"
 	defaultserverpool="pool.minexmr.com"
@@ -276,6 +292,8 @@ if [ "$1" == "DOGE" ]; then
 fi
 if [ "$1" == "BCN" ]; then
 	defaultserverpool="stratum.aikapool.com"
+	coin="BCN"
+	algorithm="scrypt"
 fi
 if [ "$1" == "XVG" ]; then
 	coin="XVG"
@@ -338,7 +356,7 @@ EOL
 _save_worker_without_account () {
 echo "[DEBUG] $workername;$registration;$nbthreads;$coin;$algorithm;$poolname;$poolserverurl;$poolserverports;$poolserverpassword;$wallet"
 cat >>workers.conf <<EOL
-$workername;$registration;$nbthreads;$coin;$algorithm;$poolname;$poolserverurl;$poolserverports;$poolserverpassword;$wallet
+$workername;$registration;$nbthreads;$coin;$algorithm;$poolname;$poolserverurl;$poolserverports;$wallet;$poolserverpassword
 EOL
 }
 
@@ -377,12 +395,23 @@ if [ "$answer" == "y" ]; then
 	#echo "[DEBUG] registration = $registration"
 	if [ ! "$registration" == "yes" ]; then
 	#echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads"
+	#sleep 30
 	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $wallet -p $poolserverpassword -t $nbthreads
-	#echo "$1 $algorithm $poolserverurl $poolserverports $wallet $poolserverpassword $nbthreads"
+		#echo "$1 $registration $cputhreads $coin $poolname $algorithm $poolserverurl $poolserverports $wallet $poolserverpassword $nbthreads"
+		#sleep 30
 	else
-	#echo $algorithm
+		#echo $algorithm
+		#echo "$1 $registration $cputhreads $coin $poolname $algorithm $poolserverurl $poolserverports $poolusername $poolworkerpassword"
+		#echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads"
+		#sleep 30
+		#if [ ! "nbplexstreams" == "" ]; then
+			#echo "Plex Streams Watcher tells me that there is some plex streams in progress"
+			#echo "So I won't start the worker $1 now, I'll wait."
+		#else
+			#echo "No plex stream stream right now, starting $1..."
 	#echo "screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads"
 	screen -dmS $1 ./cpuminer-multi/cpuminer -a $algorithm -o stratum+tcp://$poolserverurl:$poolserverports -u $poolusername.$1 -p $poolworkerpassword -t $nbthreads
+		#fi
 	fi
 	echo
 	if [[ $(screen -ls) == *"$1"* ]]; then
@@ -390,10 +419,6 @@ if [ "$answer" == "y" ]; then
 	else
 		echo "[ERROR] $1 has NOT been started !"
 	fi
-	if [ "$cli" == "yes" ]; then
-		exit
-	fi
-	_return
 else
 	echo "Maybe next time !"
 	_return
@@ -416,12 +441,9 @@ if [[ "$workers" == *"$1"* ]]; then
 else
 echo "There is no ACTIVE worker called $1"
 fi
-if [ "$cli" == "yes" ]; then
-exit
-fi
-if [ ! "$removing" == "yes" ]; then
-_return
-fi
+#if [ ! "$removing" == "yes" ]; then
+#_return
+#fi
 }
 
 _ask_delete_worker () {
@@ -481,9 +503,9 @@ _plex_streams_watch_enable () {
 echo
 echo "Activating Plex Streams Watch..."
 touch .flags/.plex_streams_watch_enabled
+screen -dmS plexstreamswatcher ./plex_streams_watch.sh
 if [ -f .flags/.plex_streams_watch_enabled ]; then
 	echo "Plex Streams Watch enabled !"
-	screen -dmS plexstreamswatcher ./plex_streams_watch.sh 
 else
 	echo "Can't enable Plex Streams Watch !"
 fi
@@ -494,6 +516,8 @@ _plex_streams_watch_disable () {
 echo
 echo "Deactivating Plex Stream Watch..."
 if [ -f .flags/.plex_streams_watch_enabled ]; then
+	echo "Stopping all workers..."
+	./$0 -stopallworkers
 	screen -X -S plexstreamswatcher kill
 	rm .flags/.plex_streams_watch_enabled
 	echo "Plex Streams Wtach has been disabled !"
