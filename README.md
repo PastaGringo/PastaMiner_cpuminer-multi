@@ -8,6 +8,6 @@
 
 # How-To (one-line) : 
 
-`git clone git@github.com:PastaGringo/PastaMiner_cpuminer-multi.git && ./PastaMiner_cpuminer-multi/PastaMiner_cpuminer-multi.sh`
+`git clone https://github.com/PastaGringo/PastaMiner_cpuminer-multi.git && ./PastaMiner_cpuminer-multi/PastaMiner_cpuminer-multi.sh`
 
 Don't hesitate to create issues and pull requests if needed ;)
